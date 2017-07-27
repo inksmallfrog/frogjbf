@@ -1,0 +1,13 @@
+{
+  "staticPrefix": "/static/",
+  "maxDownloadBuffer": 8388608,
+  "rules":{
+    "/hello":{
+      "get":"com.inksmallfrog.frogjbf.test.controller.Hello.sayHello",
+      "post":"com.inksmallfrog.frogjbf.test.controller.Hello.postHello"
+    },
+    "/getfile":{
+      "get":"com.inksmallfrog.frogjbf.test.controller.File.getFile"
+    }
+  }
+}
