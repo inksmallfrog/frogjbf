@@ -8,11 +8,11 @@
   	"oracle-dev":{
   		"db": "oracle",
   		"host": "10.25.65.33",
-  		"port": "1521",
+  		"port": 1521,
   		"user": "scott",
   		"password": "tiger",
   		"maxConnetionCount": 100,
-  		"default": "true"
+  		"default": true
   	}
   },
   "rules":{
