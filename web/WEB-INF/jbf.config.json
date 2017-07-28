@@ -6,8 +6,7 @@
   "maxDownloadBuffer": 8388608,
   "dataSources":{
   	"oracle-dev":{
-  		"driver": "oracle.jdbc.driver.OracleDriver",
-  		"url": "jdbc:oracle:thin:@${host}:${port}:oracle",
+  		"db": "oracle",
   		"host": "10.25.65.33",
   		"port": "1521",
   		"user": "scott",

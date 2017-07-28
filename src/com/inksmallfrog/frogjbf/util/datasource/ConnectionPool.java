@@ -3,20 +3,22 @@ package com.inksmallfrog.frogjbf.util.datasource;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 
 import com.inksmallfrog.frogjbf.config.DataSourceConfig;
 
-public class ConnectionPool {
+class ConnectionPool {
 	private int maxConnection = 1;
 	private List<Connection> connectionList = null;
 	private Queue<Connection> freeConnectionQueue = null;
 	private DataSourceConfig config = null;
-	
-	public ConnectionPool(DataSourceConfig config){
+
+	/**
+	 * Constructor
+	 * init the connectionPool with the config
+	 * @param config <DataSourceConfig>
+	 */
+	ConnectionPool(DataSourceConfig config){
 		//加载驱动
 		try {
 			Class.forName(config.getDriver());
@@ -24,21 +26,24 @@ public class ConnectionPool {
 			e.printStackTrace();
 		}
 		this.maxConnection = Math.max(config.getMaxConnetionCount(), 1);
-		this.connectionList = new ArrayList<Connection>(maxConnection);
-		this.freeConnectionQueue = new LinkedList<Connection>();
+		this.connectionList = new ArrayList<>(maxConnection);
+		this.freeConnectionQueue = new LinkedList<>();
 		this.config = config;
 	}
 	
 	/**
-	 * 获取一个数据库连接
-	 * @return
-	 * @throws InterruptedException
+	 * get a connection from the connectionPool or a new connection
+	 * @return <Connection>
 	 */
-	public synchronized Connection getConnection(){
+	synchronized Connection getConnection(){
 		Connection conn = null;
 		while(conn == null){
 			if(hasFreeConnection()){
-				conn = getFreeConnection();
+				try {
+					conn = getFreeConnection();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
 			}else{
 				if(connectionList.size() == config.getMaxConnetionCount()){
 					try {
@@ -63,42 +68,58 @@ public class ConnectionPool {
 	}
 	
 	/**
-	 * 判断是否存在空闲连接
-	 * @return
+	 * check if there any free connection
+	 * @return <boolean>
 	 */
 	private boolean hasFreeConnection(){
 		return !freeConnectionQueue.isEmpty();
 	}
 	
 	/**
-	 * 从空闲队列中获取连接
-	 * @return
+	 * Get connection from the freeConnectionQueue
+	 * @return null | <Connection>
 	 */
-	private Connection getFreeConnection(){
-		if(freeConnectionQueue.isEmpty()){
-			return null;
-		}else{
-			return freeConnectionQueue.poll();
-		}
+	private Connection getFreeConnection() throws SQLException {
+		Connection conn;
+		//avoid the case that database shutdown the connection
+		do{
+			conn = freeConnectionQueue.isEmpty() ? null : freeConnectionQueue.poll();
+		}while(conn != null && conn.isClosed());
+		return conn;
 	}
 	/**
-	 * 关闭数据库连接
-	 * @param conn
+	 * make the connection go to the freeConnectionQueue
+	 * @param conn <Connection>
 	 */
-	public synchronized void closeConnection(Connection conn){
+	synchronized void freeConnection(Connection conn){
 		try {
 			if(conn != null && !conn.isClosed()){
 				freeConnectionQueue.offer(conn);
-				notify();
+				notify();	//notify the guy who is waiting free connection
+
+				//remove the connection when timeout
+				new Timer().schedule(new TimerTask(){
+					@Override
+					public void run() {
+						try {
+							freeConnectionQueue.remove(conn);
+							connectionList.remove(conn);
+							conn.close();
+						} catch (SQLException e) {
+							e.printStackTrace();
+						}
+					}
+				}, config.getTimeout());
 			}
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	/**
+
+	/*
 	 * 销毁连接池
-	 */
+	 *
 	public void destroyPool(){
 		try {
 			for(Connection conn : connectionList){
@@ -108,5 +129,5 @@ public class ConnectionPool {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
+	}*/
 }

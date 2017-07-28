@@ -7,6 +7,11 @@ import java.lang.annotation.Target;
 
 /**
  * Created by inksmallfrog on 17-7-27.
+ *
+ * This Annotation marks the field
+ * which will hold some information after the action
+ *
+ * support: ResponseType(type=ResponseTypeEnum.STREAM) -> filename
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)

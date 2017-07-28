@@ -150,7 +150,7 @@ public class DBSession {
 			}
 		}
 		if(c != null){
-			connectionPool.closeConnection(c);
+			connectionPool.freeConnection(c);
 		}
 	}
 }

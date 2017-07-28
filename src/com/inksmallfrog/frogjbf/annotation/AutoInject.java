@@ -7,6 +7,13 @@ import java.lang.annotation.Target;
 
 /**
  * Created by inksmallfrog on 17-7-27.
+ *
+ * This Annotation marks the field
+ * which will be auto-injected
+ * in the controller Class
+ *
+ * support type: HttpServletRequest  (request),
+ *               HttpServletResponse (response)
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)

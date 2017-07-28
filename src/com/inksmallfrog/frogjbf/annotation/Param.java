@@ -7,6 +7,11 @@ import java.lang.annotation.Target;
 
 /**
  * Created by inksmallfrog on 17-7-27.
+ *
+ * This Annotation marks the field
+ * which will hold the request parameter before the action
+ *
+ * note: the field's name must be the same with the request parameter's name
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)

@@ -17,28 +17,24 @@ public class DBSessionFactory {
 	
 	private Map<String, ConnectionPool> connectionPools = new HashMap<String, ConnectionPool>();
 	
-	public DBSession createDefaultDBSession(){
+	private DBSession createDefaultDBSession(){
 		DataSourceConfig defaultDataSourceConfig = JBFConfig.getAppConfig().getDefaultDataSourceConfig();
 		return createDBSession(defaultDataSourceConfig);
 	}
-	public DBSession createDBSession(String dataSourceName){
+	private DBSession createDBSession(String dataSourceName){
 		DataSourceConfig config = JBFConfig.getAppConfig().getDataSourceConfig(dataSourceName);
 		return createDBSession(config);
 	}
-	public DBSession createDBSession(DataSourceConfig config){
-		ConnectionPool pool = connectionPools.get(config.getName());
-		if(null == pool){
-			pool = new ConnectionPool(config);
-			connectionPools.put(config.getName(), pool);
-		}
-		DBSession dbSession = null;
+	private DBSession createDBSession(DataSourceConfig config){
+		ConnectionPool pool = connectionPools.computeIfAbsent(config.getName(), k -> new ConnectionPool(config));
+		DBSession dbSession;
 		dbSession = new DBSession();
 		dbSession.setDataSourceName(config.getName());
 		dbSession.setConnectionPool(pool);
 		return dbSession;
 	}
 	
-	public void bindDBSessionToThread(DBSession dbSession, DataSourceConfig config){
+	private void bindDBSessionToThread(DBSession dbSession, DataSourceConfig config){
 		JBFContext.getAppContext().putDBSession(dbSession, config);
 	}
 	

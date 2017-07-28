@@ -11,44 +11,45 @@ import com.inksmallfrog.frogjbf.util.WordMapper;
 import com.inksmallfrog.frogjbf.util.datasource.DBSession;
 import com.inksmallfrog.frogjbf.util.datasource.DBSessionFactory;
 
-
+/**
+ * Created by inksmallfrog on 17-7-28.
+ *
+ * Singleton
+ *
+ * The context of the app
+ *
+ */
 public class JBFContext {
+	//Singleton structure
 	private static JBFContext context = new JBFContext();
 	public static JBFContext getAppContext(){
 		return context;
 	}
 	private JBFContext(){}
-	
-	public final ThreadLocal<Map<String, DBSession>> sessionTrdLocal = new ThreadLocal<Map<String, DBSession>>();
+
+	//bind DBSession to thread
+	private final ThreadLocal<Map<String, DBSession>> sessionTrdLocal = new ThreadLocal<Map<String, DBSession>>();
 	public void putDBSession(DBSession dbSession, DataSourceConfig config){
 		Map<String, DBSession> sessionPool = sessionTrdLocal.get();
-		if(sessionPool == null){
-			sessionPool = new HashMap<String, DBSession>();
-		}
-		if(dbSession != null && config != null){
-			sessionPool.put(config.getName(), dbSession);
-		}
+		if(sessionPool == null){ sessionPool = new HashMap<>(); }
+		if(dbSession != null && config != null){ sessionPool.put(config.getName(), dbSession); }
 		sessionTrdLocal.set(sessionPool);
 	}
 	public DBSession getDBSession(String configName){
 		Map<String, DBSession> sessionPool = sessionTrdLocal.get();
-		if(null == sessionPool){
-			return null;
-		}else{
-			return sessionTrdLocal.get().get(configName);
-		}
+		return (null == sessionPool) ? null : sessionTrdLocal.get().get(configName);
 	}
 	public List<DBSession> getAllDBSession(){
-		List<DBSession> sessions = new ArrayList<DBSession>();
+		List<DBSession> sessions = new ArrayList<>();
 		Map<String, DBSession> sessionPool = sessionTrdLocal.get();
-		for(DBSession session : sessionPool.values()){
-			sessions.add(session);
+		if(null != sessionPool){
+			for(DBSession session : sessionPool.values()){ sessions.add(session); }
 		}
 		return sessions;
 	}
 	public void removeSession(String configName){
 		Map<String, DBSession> sessionPool = sessionTrdLocal.get();
-		sessionPool.remove(configName);
+		if(null != sessionPool){ sessionPool.remove(configName); }
 		sessionTrdLocal.set(sessionPool);
 	}
 	
@@ -57,37 +58,37 @@ public class JBFContext {
 		return dbSessionFactory;
 	}
 	
-	private Map<String, Object> daoInstances = new HashMap<String, Object>();
-	private Map<String, Object> serviceInstances = new HashMap<String, Object>();
-	public void initAllInstances(){
+	private Map<String, Object> daoInstances = new HashMap<>();
+	private Map<String, Object> serviceInstances = new HashMap<>();
+	void initAllInstances(){
 		JBFConfig config = JBFConfig.getAppConfig();
-		loadPackageInstanceToMap(config.getDaoPackagePath(), daoInstances);
-		loadPackageInstanceToMap(config.getServicePackagePath(), serviceInstances);
+		loadPackageClassesInstanceToMap(config.getDaoPackagePath(), daoInstances);
+		loadPackageClassesInstanceToMap(config.getServicePackagePath(), serviceInstances);
 	}
-	
-	private void loadPackageInstanceToMap(String packagePath, Map<String, Object> map) {
+
+	/**
+	 * load all classes' instance under the package defined in config
+	 * to the target map
+	 * key: 	camel-spelling of the class name
+	 * value: 	classes' instance
+	 *
+	 * @param packagePath <String> the name load from config
+	 * @param map <Map<String, Object>>
+	 */
+	private void loadPackageClassesInstanceToMap(String packagePath, Map<String, Object> map) {
 		if(null != packagePath){
-			List<String> daoClasses = PackageLoader.getAllClassNamesFromPackage(packagePath);
-			for(String className : daoClasses){
+			List<String> classes = PackageLoader.getAllClassNamesFromPackage(packagePath);
+			for(String className : classes){
 				String beanId = WordMapper.classNameToCamelName(className);
 				Class<?> clazz = null;
-				try {
-					clazz = Class.forName(className);
-				} catch (ClassNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
 				Object instance = null;
 				try {
+					clazz = Class.forName(className);
 					instance = clazz.newInstance();
-				} catch (InstantiationException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IllegalAccessException e) {
-					// TODO Auto-generated catch block
+					map.put(beanId, instance);
+				} catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
 					e.printStackTrace();
 				}
-				map.put(beanId, instance);
 			}
 		}
 	}

@@ -1,27 +1,45 @@
 package com.inksmallfrog.frogjbf.config;
 
+import com.inksmallfrog.frogjbf.exception.UnsupportDataSourceException;
+
+/**
+ * This class defined the structure of the data-source config
+ *
+ * support: ORACLE
+ *
+ */
 public class DataSourceConfig {
-	private String name;
-	private String driver;
-	private String url;
-	private String host;
-	private String port;
-	private String user;
-	private String password;
-	private int maxConnetionCount;
-	public DataSourceConfig(String name, String driver, String url,
-			String host, String port, String user, String password,
-			int maxConnetionCount) {
+	private String name;				//data-source name
+	private String db;					//data-source db
+	private String dbName;				//data-source dbName
+	private String driver;				//data-source driver
+	private String url;					//data-source url
+	private String host;				//data-source host
+	private int port;				//data-source port
+	private String user;				//data-source username
+	private String password;			//data-source password
+	private int maxConnetionCount;		//max connection limited
+	private long timeout;				//timeout
+
+	//Constructor
+	public DataSourceConfig(String name, String db, String dbName,
+			String host, int port, String user, String password,
+			int maxConnetionCount, long timeout) throws UnsupportDataSourceException {
 		super();
 		this.name = name;
-		this.driver = driver;
-		this.url = url.replace("${host}", host).replace("${port}", port);
+		this.db = db.toLowerCase();
 		this.host = host;
-		this.port = port;
+		this.port = (-1 == port) ? getDefaultPortByDB(this.db) : port;
+		this.dbName = dbName;
 		this.user = user;
 		this.password = password;
 		this.maxConnetionCount = maxConnetionCount;
+		this.timeout = timeout;
+		this.driver = getDriverByDB(this.db);
+		this.url = generateUrlByDB(this.db);
 	}
+
+	//Setters && Getters
 	public String getName() {
 		return name;
 	}
@@ -46,10 +64,10 @@ public class DataSourceConfig {
 	public void setHost(String host) {
 		this.host = host;
 	}
-	public String getPort() {
+	public int getPort() {
 		return port;
 	}
-	public void setPort(String port) {
+	public void setPort(int port) {
 		this.port = port;
 	}
 	public String getUser() {
@@ -70,5 +88,81 @@ public class DataSourceConfig {
 	public void setMaxConnetionCount(int maxConnetionCount) {
 		this.maxConnetionCount = maxConnetionCount;
 	}
-	
+	public void setTimeout(int timeout){
+		this.timeout = timeout;
+	}
+	public long getTimeout(){
+		return timeout;
+	}
+
+	public String getDb() {
+		return db;
+	}
+
+	public void setDb(String db) {
+		this.db = db;
+	}
+
+	private int getDefaultPortByDB(String db) throws UnsupportDataSourceException {
+		switch (db) {
+			case "oracle":
+				return 1521;
+			case "mysql":
+				return 3306;
+			case "db2":
+				return 50000;
+			case "sybase":
+				return 5007;
+			case "postgresql":
+				return -1;
+			case "sql server2000":
+				return 1433;
+			case "sql server":
+				return 1433;
+			default:
+				throw new UnsupportDataSourceException(db);
+		}
+	}
+
+	private String getDriverByDB(String db) throws UnsupportDataSourceException {
+		switch (db) {
+			case "oracle":
+				return "oracle.jdbc.driver.OracleDriver";
+			case "mysql":
+				return "com.mysql.jdbc.Driver";
+			case "db2":
+				return "com.ibm.db2.jcc.DB2Driver";
+			case "sybase":
+				return "com.sybase.jdbc.SybDriver";
+			case "postgresql":
+				return "org.postgresql.Driver";
+			case "sql server2000":
+				return "com.microsoft.jdbc.sqlserver.SQLServerDriver";
+			case "sql server":
+				return "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+			default:
+				throw new UnsupportDataSourceException(db);
+		}
+	}
+
+	private String generateUrlByDB(String db) throws UnsupportDataSourceException {
+		switch (db) {
+			case "oracle":
+				return "jdbc:oracle:thin:@" + this.host + ":" + this.port + ":" + this.dbName;
+			case "mysql":
+				return "jdbc:mysql://" + this.host + ":" + this.port + "/" + this.dbName;
+			case "db2":
+				return "jdbc:db2://" + this.host + ":" + this.port + "/" + this.dbName;
+			case "sybase":
+				return "jdbc:sybase:Tds:" + this.host + ":" + this.port + "/" + this.dbName;
+			case "postgresql":
+				return "jdbc:postgresql://" + this.host + "/" + this.dbName;
+			case "sql server2000":
+				return "jdbc:microsoft:sqlserver://" + this.host + ":" + this.port + ";DatabaseName=" + this.dbName;
+			case "sql server":
+				return "jdbc:sqlserver://" + this.host + ":" + this.port + "; DatabaseName=" + this.dbName;
+			default:
+				throw new UnsupportDataSourceException(db);
+		}
+	}
 }
