@@ -1,8 +1,8 @@
 package com.inksmallfrog.frogjbf.servlet;
 
 import com.inksmallfrog.frogjbf.annotation.ResponseType;
-import com.inksmallfrog.frogjbf.config.JBFConfig;
 import com.inksmallfrog.frogjbf.constant.URLConstant;
+import com.inksmallfrog.frogjbf.global.JBFConfig;
 import com.inksmallfrog.frogjbf.util.JBFControllerClass;
 import com.inksmallfrog.frogjbf.util.ResponseTypeEnum;
 import com.inksmallfrog.frogjbf.util.StreamResponse;
@@ -26,7 +26,12 @@ import java.net.URLEncoder;
  */
 @WebServlet(name = "JBFServlet")
 public class JBFServlet extends HttpServlet {
-    @Override
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	@Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         this.doPost(req, resp);
     }
@@ -38,10 +43,12 @@ public class JBFServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        JBFConfig config = JBFConfig.getInstance();
-        JBFControllerClass jbfControllerClass = config.getHandlerClassByUrlAndMethod(request.getRequestURI(), request.getMethod());
+        JBFConfig config = JBFConfig.getAppConfig();
+        String requestPath = request.getServletPath();
+        JBFControllerClass jbfControllerClass = config.getHandlerClassByUrlAndMethod(requestPath, request.getMethod());
         if(jbfControllerClass == null){
             response.setStatus(404);
+            return;
         }
         Object instance = null;
         try {
@@ -56,7 +63,7 @@ public class JBFServlet extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        Method method = config.getHandlerByUrlAndMethod(request.getRequestURI(), request.getMethod());
+        Method method = config.getHandlerByUrlAndMethod(requestPath, request.getMethod());
         ResponseType anno = method.getAnnotation(ResponseType.class);
         ResponseTypeEnum type = (anno == null ? ResponseTypeEnum.VIEW : anno.type());
         try {
@@ -137,6 +144,8 @@ public class JBFServlet extends HttpServlet {
             e.printStackTrace();
         } catch (InvocationTargetException e) {
             e.printStackTrace();
+        }finally{
+        	
         }
     }
 

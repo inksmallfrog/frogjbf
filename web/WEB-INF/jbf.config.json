@@ -1,6 +1,21 @@
 {
+  "daoPackagePath": "com.inksmallfrog.frogjbf.test.dao",
+  "servicePackagePath": "com.inksmallfrog.frogjbf.test.service",
+  "serverRoot": "/frogJBF",
   "staticPrefix": "/static/",
   "maxDownloadBuffer": 8388608,
+  "dataSources":{
+  	"oracle-dev":{
+  		"driver": "oracle.jdbc.driver.OracleDriver",
+  		"url": "jdbc:oracle:thin:@${host}:${port}:oracle",
+  		"host": "10.25.65.33",
+  		"port": "1521",
+  		"user": "scott",
+  		"password": "tiger",
+  		"maxConnetionCount": 100,
+  		"default": "true"
+  	}
+  },
   "rules":{
     "/hello":{
       "get":"com.inksmallfrog.frogjbf.test.controller.Hello.sayHello",
@@ -8,6 +23,10 @@
     },
     "/getfile":{
       "get":"com.inksmallfrog.frogjbf.test.controller.File.getFile"
+    },
+    "/dept":{
+      "get":"com.inksmallfrog.frogjbf.test.controller.Dept.queryDept",
+      "post":"com.inksmallfrog.frogjbf.test.controller.Dept.insertDept"
     }
   }
 }

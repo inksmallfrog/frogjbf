@@ -15,7 +15,7 @@ import java.util.Map;
  * Created by inksmallfrog on 17-7-27.
  */
 public class JBFControllerClass {
-    private Class clazz;
+    private Class<?> clazz;
     private Map<String, Method> methods = new HashMap<>();
     private Map<String, Field> autoInjectFields = new HashMap<>();
     private Map<String, Field> paramFields = new HashMap<>();

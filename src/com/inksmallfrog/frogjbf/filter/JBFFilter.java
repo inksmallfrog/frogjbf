@@ -1,6 +1,6 @@
 package com.inksmallfrog.frogjbf.filter;
 
-import com.inksmallfrog.frogjbf.config.JBFConfig;
+import com.inksmallfrog.frogjbf.global.JBFConfig;
 
 import javax.servlet.*;
 import javax.servlet.annotation.WebFilter;
@@ -16,12 +16,12 @@ public class JBFFilter implements Filter {
     }
 
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws ServletException, IOException {
-        JBFConfig config = JBFConfig.getInstance();
+        JBFConfig config = JBFConfig.getAppConfig();
         String staticRouterPrefix = config.getStaticRouterPrefix();
         String dynamicRouterPrefix = config.getDynamicRouterPrefix();
 
         HttpServletRequest request = (HttpServletRequest)req;
-        String requestUri = request.getRequestURI();
+        String requestUri = request.getServletPath();
         if(staticRouterPrefix != null && requestUri.startsWith(staticRouterPrefix)){
             chain.doFilter(req, resp);
         }else if(dynamicRouterPrefix == null || requestUri.startsWith(dynamicRouterPrefix)){
