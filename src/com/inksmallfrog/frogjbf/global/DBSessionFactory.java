@@ -1,40 +1,60 @@
-package com.inksmallfrog.frogjbf.util.datasource;
+package com.inksmallfrog.frogjbf.global;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import com.inksmallfrog.frogjbf.config.DataSourceConfig;
-import com.inksmallfrog.frogjbf.global.JBFConfig;
-import com.inksmallfrog.frogjbf.global.JBFContext;
+import com.inksmallfrog.frogjbf.datasource.DataSourceConfig;
+import com.inksmallfrog.frogjbf.datasource.ConnectionPool;
+import com.inksmallfrog.frogjbf.datasource.DBSession;
 
+/**
+ * Created by inksmallfrog on 17-7-28.
+ *
+ * Singleton
+ *
+ * work as the class name
+ */
 public class DBSessionFactory {
+	//singleton
 	private static DBSessionFactory factory = new DBSessionFactory();
-	public static DBSessionFactory getInstance(){
+	static DBSessionFactory getInstance(){
 		return factory;
 	}
 	private DBSessionFactory(){}
-	
+
+	//connectionPools is used for all threads
 	private Map<String, ConnectionPool> connectionPools = new HashMap<String, ConnectionPool>();
-	
+
+	/**
+	 * create default DBSession according to config
+	 * @return <DBSession>
+	 */
 	private DBSession createDefaultDBSession(){
-		DataSourceConfig defaultDataSourceConfig = JBFConfig.getAppConfig().getDefaultDataSourceConfig();
-		return createDBSession(defaultDataSourceConfig);
+		return createDBSession(JBFConfig.getAppConfig().getDefaultDataSourceConfig());
 	}
+	/**
+	 * create default DBSession base on data-source name
+	 * @return <DBSession>
+	 */
 	private DBSession createDBSession(String dataSourceName){
-		DataSourceConfig config = JBFConfig.getAppConfig().getDataSourceConfig(dataSourceName);
-		return createDBSession(config);
+		return createDBSession(JBFConfig.getAppConfig().getDataSourceConfig(dataSourceName));
 	}
+	/**
+	 * create default DBSession base on data-source config
+	 * @return <DBSession>
+	 */
 	private DBSession createDBSession(DataSourceConfig config){
-		ConnectionPool pool = connectionPools.computeIfAbsent(config.getName(), k -> new ConnectionPool(config));
-		DBSession dbSession;
-		dbSession = new DBSession();
-		dbSession.setDataSourceName(config.getName());
-		dbSession.setConnectionPool(pool);
+		ConnectionPool pool = connectionPools.get(config);
+		if(null == pool){
+			pool = new ConnectionPool(config);
+			connectionPools.put(config.getName(), pool);
+		}
+		DBSession dbSession = new DBSession(config, pool);
 		return dbSession;
 	}
-	
-	private void bindDBSessionToThread(DBSession dbSession, DataSourceConfig config){
+	private void bindDBSessionToCurrentThread(DBSession dbSession, DataSourceConfig config){
 		JBFContext.getAppContext().putDBSession(dbSession, config);
 	}
 	
@@ -47,8 +67,8 @@ public class DBSessionFactory {
 	public DBSession getDBSession(DataSourceConfig config){
 		DBSession dbSession = JBFContext.getAppContext().getDBSession(config.getName());
 		if(dbSession == null){
-			dbSession = createDefaultDBSession();
-			bindDBSessionToThread(dbSession, config);
+			dbSession = createDBSession(config);
+			bindDBSessionToCurrentThread(dbSession, config);
 		}
 		return dbSession;
 	}
@@ -58,19 +78,22 @@ public class DBSessionFactory {
 	public void unbindDefaultDBSessionFromThread(){
 		unbindDBSessionFromThread(JBFConfig.getAppConfig().getDefaultDataSourceConfig());
 	}
-	public void unbindDBSessionFromThread(
-			DataSourceConfig defaultDataSourceConfig) {
+	public void unbindDBSessionFromThread(DataSourceConfig defaultDataSourceConfig) {
 		unbindDBSessionFromThread(defaultDataSourceConfig.getName());
 	}
 	public void unbindDBSessionFromThread(String name) {
 		JBFContext.getAppContext().removeSession(name);
 	}
-	
-	
 	public void closeCurrentDBSession(){
 		List<DBSession> dbSessions = getAllDBSession();
 		for(DBSession dbSession : dbSessions){
-			unbindDBSessionFromThread(dbSession.getDataSourceName());
+			unbindDBSessionFromThread(dbSession.getConfig().getName());
+		}
+	}
+	public void destroy(){
+		Set<String> keys = connectionPools.keySet();
+		for(String key : keys){
+			connectionPools.get(key).destroyPool();
 		}
 	}
 }

@@ -2,6 +2,7 @@ package com.inksmallfrog.frogjbf.servlet;
 
 import com.inksmallfrog.frogjbf.annotation.ResponseType;
 import com.inksmallfrog.frogjbf.global.JBFConfig;
+import com.inksmallfrog.frogjbf.global.JBFContext;
 import com.inksmallfrog.frogjbf.util.JBFControllerClass;
 import com.inksmallfrog.frogjbf.util.ResponseTypeEnum;
 import com.inksmallfrog.frogjbf.util.StreamResponse;
@@ -27,7 +28,7 @@ import java.net.URLEncoder;
  * most kinds of dynamic request(except .jsp request).
  */
 @WebServlet(name = "JBFServlet")
-public class JBFServlet extends HttpServlet {
+public class JBFServlet extends HttpServlet {	
 	@Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         this.doPost(req, resp);
@@ -55,8 +56,8 @@ public class JBFServlet extends HttpServlet {
             jbfControllerClass.bindRequest(instance, request, response);
 
             Method method = config.getHandlerByUrlAndMethod(requestPath, request.getMethod());
-            ResponseType anno = method.getAnnotation(ResponseType.class);
-            ResponseTypeEnum type = (null == anno ? ResponseTypeEnum.VIEW : anno.type());
+            ResponseType annotation = method.getAnnotation(ResponseType.class);
+            ResponseTypeEnum type = (null == annotation ? ResponseTypeEnum.VIEW : annotation.type());
             switch (type) {
                 case VIEW: {
                     response.setContentType("text/html;charset=utf-8");
@@ -133,6 +134,7 @@ public class JBFServlet extends HttpServlet {
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
         }
+        JBFContext.getAppContext().getDbSessionFactory().closeCurrentDBSession();
     }
 
     @Override

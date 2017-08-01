@@ -2,25 +2,18 @@ package com.inksmallfrog.frogjbf.util;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
+import java.net.URL;
 import java.net.URLDecoder;
 import java.util.LinkedList;
 import java.util.List;
 
 public class PackageLoader {
-	public static void main(String[] args){
-		List<String> classes = PackageLoader.getAllClassNamesFromPackage("com.inksmallfrog.frogjbf.test");
-		for(String name : classes){
-			System.out.println(WordMapper.classNameToCamelName(name));
-		}
-		System.out.println("---END---");
-	}
-	
 	public static List<String> getAllClassNamesFromPackage(String packages){
 		if(null == packages){
 			return null;
 		}
 		List<String> classNameList = new LinkedList<String>();
-		String path = ClassLoader.getSystemResource("").getPath() 
+		String path = PackageLoader.class.getResource("/").getPath()
 				+ packages.replace('.', '/');
 		try {
 			path = URLDecoder.decode(path,"utf-8");

@@ -15,16 +15,9 @@
   		"dbName": "ORACLE",
   		"user": "scott",
   		"password": "tiger",
-  		"maxConnetionCount": 100
-  	},
-    "mysql-dev":{
-        "db": "mysql",
-        "dbName": "frogjbf_test",
-        "user": "root",
-        "password": "123456",
-        "maxConnectionCount": 100,
-        "default": true
-    }
+  		"maxConnetionCount": 100,
+  		"default": true
+  	}
   },
   "rules":{
     "/hello":{

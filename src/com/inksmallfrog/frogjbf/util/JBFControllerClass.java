@@ -5,16 +5,25 @@ import com.inksmallfrog.frogjbf.annotation.Data;
 import com.inksmallfrog.frogjbf.annotation.Param;
 import com.inksmallfrog.frogjbf.annotation.ResponseType;
 import com.inksmallfrog.frogjbf.exception.InvalidControllerFieldException;
+import com.inksmallfrog.frogjbf.exception.InvalidParamBindToFieldException;
 import com.inksmallfrog.frogjbf.exception.InvalidResponseTypeException;
 import com.inksmallfrog.frogjbf.exception.MethodNotFoundException;
+
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileUploadException;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.json.JSONTokener;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -89,7 +98,9 @@ public class JBFControllerClass {
                 }
                 if(field.isAnnotationPresent(Param.class)){
                     Class<?> fieldClass = field.getType();
-                    if(fieldClass.equals(String.class) || fieldClass.equals(String[].class)){
+                    if(fieldClass.equals(String.class) 
+                    		|| fieldClass.equals(String[].class)
+                    		|| fieldClass.equals(InputStream.class)){
                         if(!field.isAccessible()) field.setAccessible(true);
                         paramFields.put(field.getName(), field);
                     }else{
@@ -129,19 +140,53 @@ public class JBFControllerClass {
             if(requestField != null) requestField.set(instance, request);
             Field responseField = autoInjectFields.get("response");
             if(responseField != null) responseField.set(instance, response);
-
-            for(Map.Entry<String, Field> entry : paramFields.entrySet()){
-                Field field = entry.getValue();
-                if(field.getType().equals(String.class)){
-                    field.set(instance, request.getParameter(entry.getKey()));
-                }else if(field.getType().equals(String[].class)){
-                    field.set(instance, request.getParameterValues(entry.getKey()));
-                }
-
+            
+            if(ServletFileUpload.isMultipartContent(request)){
+                DiskFileItemFactory factory = new DiskFileItemFactory();
+                ServletFileUpload upload = new ServletFileUpload(factory);
+                upload.setHeaderEncoding("UTF-8");
+                try {
+					List<FileItem> formItems = upload.parseRequest(request);
+					for(FileItem item : formItems){
+						if(item.isFormField()){
+							setField(instance, item.getName(), item.getString());
+						}else{
+							setField(instance, item.getName(), item.getInputStream());
+						}
+					}
+				} catch (FileUploadException | IOException e) {
+					e.printStackTrace();
+				}
+            }else{
+            	 Map<String, String[]> parameterMap = request.getParameterMap();
+                 for(Map.Entry<String, String[]> entry : parameterMap.entrySet()){
+                     setField(instance, entry.getKey(), entry.getValue());
+                 }
             }
         }catch(NullPointerException | IllegalAccessException e){
             e.printStackTrace();
         }
+    }
+    
+    private void setField(Object instance, String key, Object value){
+    	Field field = paramFields.get(key);
+    	if(null != field){
+    		Class<?> fieldType = field.getType();
+            try {
+	    		if(!(value instanceof String && fieldType.equals(String.class)
+	    				||(value instanceof String[] && fieldType.equals(String[].class))
+	    				|| (value instanceof InputStream && fieldType.equals(InputStream.class)))){
+	    			throw new InvalidParamBindToFieldException(clazz.getName(),
+	    					field.getName(), value.getClass().getName(), fieldType.getName());
+	    		}else{
+	    			field.set(instance, value);
+	    		}
+    		} catch (IllegalArgumentException 
+    				| IllegalAccessException 
+    				| InvalidParamBindToFieldException e) {
+    			e.printStackTrace();
+    		}
+    	}
     }
     public Object getData(Object instance, String fieldName) throws IllegalAccessException {
         Field field = dataFields.get(fieldName);

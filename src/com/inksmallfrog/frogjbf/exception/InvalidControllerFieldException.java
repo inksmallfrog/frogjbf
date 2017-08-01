@@ -27,7 +27,7 @@ public class InvalidControllerFieldException extends Exception{
             expectedType = "HttpServletRequest | HttpServletResponse";
         }
         else if(expectedType.equals("param")){
-            expectedType = "String | String[]";
+            expectedType = "String | String[] | InputStream";
         }
         return expectedType;
     }

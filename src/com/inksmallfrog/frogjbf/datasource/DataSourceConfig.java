@@ -1,6 +1,15 @@
-package com.inksmallfrog.frogjbf.config;
+package com.inksmallfrog.frogjbf.datasource;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import com.inksmallfrog.frogjbf.datasource.impl.MysqlSQLGenerator;
+import com.inksmallfrog.frogjbf.datasource.impl.OracleSQLGenerator;
+import com.inksmallfrog.frogjbf.datasource.impl.OracleTypeMapper;
+import com.inksmallfrog.frogjbf.datasource.inte.SQLGenerator;
+import com.inksmallfrog.frogjbf.datasource.inte.TypeMapper;
 import com.inksmallfrog.frogjbf.exception.UnsupportDataSourceException;
+
 
 /**
  * This class defined the structure of the data-source config
@@ -9,13 +18,16 @@ import com.inksmallfrog.frogjbf.exception.UnsupportDataSourceException;
  *
  */
 public class DataSourceConfig {
+	private static Map<String, SQLGenerator> generatorMap = new HashMap<>();
+	private static Map<String, TypeMapper> typeMappers = new HashMap();
+	
 	private String name;				//data-source name
 	private String db;					//data-source db
 	private String dbName;				//data-source dbName
 	private String driver;				//data-source driver
 	private String url;					//data-source url
 	private String host;				//data-source host
-	private int port;				//data-source port
+	private int port;					//data-source port
 	private String user;				//data-source username
 	private String password;			//data-source password
 	private int maxConnetionCount;		//max connection limited
@@ -102,7 +114,40 @@ public class DataSourceConfig {
 	public void setDb(String db) {
 		this.db = db;
 	}
+	
+	public TypeMapper getTypeMapper(){
+		TypeMapper mapper = null;
+		if(typeMappers.containsKey(db)){
+			mapper = typeMappers.get(db);
+		}else{
+			switch(db){
+			case "oracle":
+				mapper = new OracleTypeMapper();
+				break;
+			}
+			typeMappers.put(db, mapper);
+		}
+		return mapper;
+	}
 
+	public SQLGenerator getSQLGenerator(){
+		SQLGenerator generator = null;
+		if(typeMappers.containsKey(db)){
+			generator = generatorMap.get(db);
+		}else{
+			switch (db){
+				case "oracle":
+					generator = new OracleSQLGenerator();
+					break;
+				case "mysql":
+					generator = new MysqlSQLGenerator();
+					break;
+			}
+			generatorMap.put(db, generator);
+		}
+		return generator;
+	}
+	
 	private int getDefaultPortByDB(String db) throws UnsupportDataSourceException {
 		switch (db) {
 			case "oracle":

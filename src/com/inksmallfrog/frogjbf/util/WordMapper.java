@@ -12,7 +12,7 @@ public class WordMapper {
 			return className;
 		}else{
 			StringBuilder camelNameBuilder = new StringBuilder();
-			camelNameBuilder.append((char)((char)className.charAt(0) + 32));
+			camelNameBuilder.append((char)(className.charAt(0) + 32));
 			camelNameBuilder.append(className.substring(1));
 			
 			return camelNameBuilder.toString();

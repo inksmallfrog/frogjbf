@@ -1,18 +1,22 @@
 package com.inksmallfrog.frogjbf.global;
 
-import com.inksmallfrog.frogjbf.config.DataSourceConfig;
+import com.inksmallfrog.frogjbf.datasource.DataSourceConfig;
 import com.inksmallfrog.frogjbf.exception.JBFConfigException;
 import com.inksmallfrog.frogjbf.exception.MethodNotFoundException;
 import com.inksmallfrog.frogjbf.exception.UnsupportDataSourceException;
 import com.inksmallfrog.frogjbf.util.IOUtil;
 import com.inksmallfrog.frogjbf.util.JBFControllerClass;
+
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -43,28 +47,29 @@ public class JBFConfig {
 
     //config items
     private String urlRedirectPrefix;
+    private String beanPackagePath;
     private String daoPackagePath;
     private String servicePackagePath;
-    //private String serverRoot;
-    private String staticRouterPrefix;
-    private String dynamicRouterPrefix;
+
     private int maxDownloadBuffer;
 
+    private Map<String, List<String>> prefixPattern = new HashMap();
+    private Map<String, List<String>> postfixPattern = new HashMap();
+    
     private Map<String, JBFControllerClass> urlMethod2ControllerClassMap = new HashMap<>();
     private Map<String, Method> urlMethod2HandlerMap = new HashMap<>();
     private Map<String, DataSourceConfig> dataSources = new HashMap<>();
     private DataSourceConfig defaultDataSource = null;
 
     private String[] requestMethodsAvailable = {"get", "post", "delete", "put"};
+    private String[] routerPatternTypes = {"staticPattern", "dynamicPattern"};
 
 	private void loadConfig(){
         JSONObject jsonObject = loadJsonFromConfig();
         loadSingleData(jsonObject);
         loadDataSources(jsonObject);
+        loadRouterPattern(jsonObject);
         loadRouterRules(jsonObject);
-
-        //init context according to the config
-        JBFContext.getAppContext().initAllInstances();
     }
     private JSONObject loadJsonFromConfig(){
         InputStream configFilePath = JBFConfig.class.getClassLoader().getResourceAsStream(CONFIG_PATH_RELATIVE_TO_CLASSLOADER);
@@ -79,18 +84,38 @@ public class JBFConfig {
     private void loadSingleData(JSONObject jsonObject){
         urlRedirectPrefix = (String) requireJsonItemWithDefaultValue(jsonObject,
                 "urlRedirectPrefix", DEFAULT_REDIRECT_PREFIX);
+        beanPackagePath = (String) requireJsonItemWithDefaultValue(jsonObject,
+                "beanPackagePath", null);
         daoPackagePath = (String) requireJsonItemWithDefaultValue(jsonObject,
                 "daoPackagePath", null);
         servicePackagePath = (String) requireJsonItemWithDefaultValue(jsonObject,
                 "servicePackagePath", null);
-        //serverRoot = jsonObject.has("serverRoot") ? jsonObject.getString("serverRoot") : "";
-        staticRouterPrefix = (String) requireJsonItemWithDefaultValue(jsonObject,
-                "staticPrefix", null);
-        dynamicRouterPrefix = (String) requireJsonItemWithDefaultValue(jsonObject,
-                "dynamicRouterPrefix", null);
         maxDownloadBuffer = (int) requireJsonItemWithDefaultValue(jsonObject,
                 "maxDownloadBuffer", DEFAULT_MAX_DOWNLOAD_BUFFER);
     }
+    private void loadRouterPattern(JSONObject jsonObject){
+    	for(String patternType : routerPatternTypes){
+    		if(jsonObject.has(patternType)){
+    			List<String> prefixPatterns = new ArrayList();
+    			List<String> postfixPatterns = new ArrayList();
+        		JSONObject patternTypeObject = jsonObject.getJSONObject(patternType);
+        		
+        		JSONArray prefix = patternTypeObject.getJSONArray("prefix");
+        		JSONArray postfix = patternTypeObject.getJSONArray("postfix");
+        		for(int i = 0; i < prefix.length(); ++i){
+        			prefixPatterns.add(prefix.getString(i));
+        		}
+        		for(int i = 0; i < postfix.length(); ++i){
+        			postfixPatterns.add(postfix.getString(i));
+        		}
+        		
+        		prefixPattern.put(patternType, prefixPatterns);
+        		postfixPattern.put(patternType, postfixPatterns);
+        	}
+    	}
+    	
+    }
+   
     private void loadDataSources(JSONObject jsonObject){
         if(jsonObject.has("dataSources")){
             JSONObject dataSourcesObject = jsonObject.getJSONObject("dataSources");
@@ -142,7 +167,7 @@ public class JBFConfig {
     }
     private Object requireJsonItem(JSONObject jsonObje, String key){
         Object ret = null;
-        if(jsonObje.has("key")){
+        if(jsonObje.has(key)){
             ret = jsonObje.get(key);
         }else{
             try {
@@ -232,7 +257,14 @@ public class JBFConfig {
     String getDaoPackagePath() {
         return daoPackagePath;
     }
-    public void setDaoPackagePath(String daoPackagePath) {
+    
+    public String getBeanPackagePath() {
+		return beanPackagePath;
+	}
+	public void setBeanPackagePath(String beanPackagePath) {
+		this.beanPackagePath = beanPackagePath;
+	}
+	public void setDaoPackagePath(String daoPackagePath) {
         this.daoPackagePath = daoPackagePath;
     }
     String getServicePackagePath() {
@@ -241,12 +273,12 @@ public class JBFConfig {
     public void setServicePackagePath(String servicePackagePath) {
         this.servicePackagePath = servicePackagePath;
     }
-    public String getDynamicRouterPrefix() {
-        return dynamicRouterPrefix;
+    public List<String> getPrefixPatterns(String patternType) {
+        return prefixPattern.get(patternType);
     }
 
-    public String getStaticRouterPrefix() {
-        return staticRouterPrefix;
+    public List<String> getPostfixPatterns(String patternType) {
+        return postfixPattern.get(patternType);
     }
 
     public JBFControllerClass getHandlerClassByUrlAndMethod(String url, String method){

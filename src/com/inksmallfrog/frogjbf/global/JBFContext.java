@@ -5,11 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.inksmallfrog.frogjbf.config.DataSourceConfig;
+import com.inksmallfrog.frogjbf.datasource.DataSourceConfig;
+import com.inksmallfrog.frogjbf.datasource.DBSession;
+import com.inksmallfrog.frogjbf.util.BeanClassWrapper;
 import com.inksmallfrog.frogjbf.util.PackageLoader;
 import com.inksmallfrog.frogjbf.util.WordMapper;
-import com.inksmallfrog.frogjbf.util.datasource.DBSession;
-import com.inksmallfrog.frogjbf.util.datasource.DBSessionFactory;
 
 /**
  * Created by inksmallfrog on 17-7-28.
@@ -25,7 +25,9 @@ public class JBFContext {
 	public static JBFContext getAppContext(){
 		return context;
 	}
-	private JBFContext(){}
+	private JBFContext(){
+		initAll();
+	}
 
 	//bind DBSession to thread
 	private final ThreadLocal<Map<String, DBSession>> sessionTrdLocal = new ThreadLocal<Map<String, DBSession>>();
@@ -60,12 +62,33 @@ public class JBFContext {
 	
 	private Map<String, Object> daoInstances = new HashMap<>();
 	private Map<String, Object> serviceInstances = new HashMap<>();
-	void initAllInstances(){
+	private Map<String, BeanClassWrapper> beanClasses = new HashMap<>();
+	
+	public BeanClassWrapper getBeanClass(String className){
+		return beanClasses.get(className);
+	}
+	
+	void initAll(){
 		JBFConfig config = JBFConfig.getAppConfig();
+		loadBeans();
 		loadPackageClassesInstanceToMap(config.getDaoPackagePath(), daoInstances);
 		loadPackageClassesInstanceToMap(config.getServicePackagePath(), serviceInstances);
 	}
 
+	private void loadBeans(){
+		String packagePath = JBFConfig.getAppConfig().getBeanPackagePath();
+		if(null != packagePath){
+			List<String> classes = PackageLoader.getAllClassNamesFromPackage(packagePath);
+			for(String className : classes){
+				try {
+					beanClasses.put(className, new BeanClassWrapper(Class.forName(className)));
+				} catch (ClassNotFoundException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
 	/**
 	 * load all classes' instance under the package defined in config
 	 * to the target map
@@ -97,5 +120,9 @@ public class JBFContext {
 	}
 	public Object getService(String daoName){
 		return serviceInstances.get(daoName);
+	}
+	
+	public void destroy(){
+		dbSessionFactory.destroy();
 	}
 }

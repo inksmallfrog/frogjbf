@@ -1,78 +1,60 @@
-package com.inksmallfrog.frogjbf.util.datasource;
+package com.inksmallfrog.frogjbf.datasource;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
 
-import com.inksmallfrog.frogjbf.config.DataSourceConfig;
-
-class ConnectionPool {
-	private int maxConnection = 1;
-	private List<Connection> connectionList = null;
-	private Queue<Connection> freeConnectionQueue = null;
-	private DataSourceConfig config = null;
+/**
+ * Created by inksmallfrog on 17-7-28.
+ *
+ * This class is using for maintaining data-source connection
+ */
+public class ConnectionPool {
+	private List<Connection> connectionList = null;			//all connections maintained
+	private Queue<Connection> freeConnectionQueue = null;	//free connections
+	private DataSourceConfig config = null;					//data-source config
 
 	/**
 	 * Constructor
-	 * init the connectionPool with the config
+	 * init the connectionPool with data-source config
 	 * @param config <DataSourceConfig>
 	 */
-	ConnectionPool(DataSourceConfig config){
+	public ConnectionPool(DataSourceConfig config){
 		//加载驱动
 		try {
 			Class.forName(config.getDriver());
 		}catch(ClassNotFoundException e){
 			e.printStackTrace();
 		}
-		this.maxConnection = Math.max(config.getMaxConnetionCount(), 1);
-		this.connectionList = new ArrayList<>(maxConnection);
+		this.connectionList = new ArrayList<>(config.getMaxConnetionCount());
 		this.freeConnectionQueue = new LinkedList<>();
 		this.config = config;
 	}
 	
 	/**
-	 * get a connection from the connectionPool or a new connection
+	 * Try to get a connection from the freeQueue
+	 * or create a new connection
 	 * @return <Connection>
 	 */
 	synchronized Connection getConnection(){
 		Connection conn = null;
-		while(conn == null){
-			if(hasFreeConnection()){
-				try {
-					conn = getFreeConnection();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
-			}else{
-				if(connectionList.size() == config.getMaxConnetionCount()){
-					try {
+		try{
+			while(null == conn){
+				conn = getFreeConnection();
+				if(null == conn){	//no free connection available
+					if(connectionList.size() == config.getMaxConnetionCount()){
 						wait();
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}else{
-					try {
+					}else{
 						conn = DriverManager.getConnection(config.getUrl(), config.getUser(), config.getPassword());
 						connectionList.add(conn);
-					} catch (SQLException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-						break;
 					}
 				}
 			}
+		}catch (SQLException | InterruptedException e){
+			e.printStackTrace();
 		}
 		return conn;
-	}
-	
-	/**
-	 * check if there any free connection
-	 * @return <boolean>
-	 */
-	private boolean hasFreeConnection(){
-		return !freeConnectionQueue.isEmpty();
 	}
 	
 	/**
@@ -81,19 +63,18 @@ class ConnectionPool {
 	 */
 	private Connection getFreeConnection() throws SQLException {
 		Connection conn;
-		//avoid the case that database shutdown the connection
-		do{
+		do{	//avoid the case that database shutdown the connection
 			conn = freeConnectionQueue.isEmpty() ? null : freeConnectionQueue.poll();
-		}while(conn != null && conn.isClosed());
+		}while(null != conn && conn.isClosed());
 		return conn;
 	}
 	/**
 	 * make the connection go to the freeConnectionQueue
 	 * @param conn <Connection>
 	 */
-	synchronized void freeConnection(Connection conn){
+	synchronized void freeConnection(final Connection conn){
 		try {
-			if(conn != null && !conn.isClosed()){
+			if(null != conn && !conn.isClosed()){
 				freeConnectionQueue.offer(conn);
 				notify();	//notify the guy who is waiting free connection
 
@@ -102,9 +83,11 @@ class ConnectionPool {
 					@Override
 					public void run() {
 						try {
-							freeConnectionQueue.remove(conn);
-							connectionList.remove(conn);
-							conn.close();
+							if(conn != null){
+								freeConnectionQueue.remove(conn);
+								connectionList.remove(conn);
+								conn.close();
+							}
 						} catch (SQLException e) {
 							e.printStackTrace();
 						}
@@ -112,22 +95,22 @@ class ConnectionPool {
 				}, config.getTimeout());
 			}
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	/*
 	 * 销毁连接池
-	 *
+	 */
 	public void destroyPool(){
 		try {
 			for(Connection conn : connectionList){
+				connectionList.remove(conn);
 				conn.close();
 			}
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}*/
+	}
 }
